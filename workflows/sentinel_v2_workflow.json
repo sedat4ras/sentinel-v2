@@ -1,0 +1,77 @@
+{
+  "name": "Sentinel V2 — AI Threat Analysis",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sentinel-v2",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst honeyFlag = data.honey_triggered\n  ? '\\n⚡ **HONEY-COMMAND WAS TRIGGERED** — Attacker likely used an AI assistant to analyze deception files.'\n  : '';\n\nconst osint = data.osint || {};\nconst osintText = osint.country\n  ? `Origin: ${osint.city}, ${osint.country} (${osint.country_code})\\nISP: ${osint.isp}\\nASN: ${osint.asn}\\nProxy/VPN: ${osint.is_proxy ? 'YES' : 'No'}\\nAbuseIPDB Score: ${osint.abuse_score}/100 (${osint.total_reports} reports)`\n  : 'OSINT data unavailable';\n\nconst prompt = `You are a senior threat intelligence analyst. Analyze this honeypot intrusion and produce a structured threat report.\n\n## Session Metadata\n- Attacker IP: ${data.ip}\n- Session ID: ${data.session}\n- Duration: ${data.duration}\n- Total Events: ${data.event_count}${honeyFlag}\n\n## OSINT Intel\n${osintText}\n\n## Raw Session Logs\n\\`\\`\\`\n${(data.full_logs || '').slice(0, 4000)}\n\\`\\`\\`\n\n## Your Analysis\nProvide:\n1. Attack type classification (Brute-Force / Recon / Crypto-miner / Botnet / APT / Other)\n2. MITRE ATT&CK technique IDs matched (e.g. T1110.001)\n3. Key commands / actions (highlight critical ones)\n4. Threat level (Low / Medium / High / Critical)\n5. Two-sentence executive summary\n\nBe concise. Format for a Telegram message (no markdown tables).`;\n\nreturn [{ json: { prompt, ip: data.ip, session: data.session, duration: data.duration, event_count: data.event_count, honey_triggered: data.honey_triggered, osint_text: osintText } }];"
+      },
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "apiKey",
+        "resource": "chat",
+        "model": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "user",
+              "content": "={{ $json.prompt }}"
+            }
+          ]
+        },
+        "options": {
+          "maxTokens": 600,
+          "temperature": 0.3
+        }
+      },
+      "name": "OpenAI Analysis",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ai = $input.first().json.message.content;\nconst meta = $('Build Prompt').first().json;\n\nconst honey = meta.honey_triggered ? '\\n🎣 <b>HONEY-COMMAND TRIGGERED</b> — AI-assisted attack detected\\n' : '';\n\nconst msg = `📊 <b>SESSION CLOSED — THREAT REPORT</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━\n🔗 IP: <code>${meta.ip}</code>\n🆔 Session: <code>${meta.session}</code>\n⏱ Duration: ${meta.duration}\n📋 Events: ${meta.event_count}${honey}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📡 OSINT:\\n${meta.osint_text}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n🤖 <b>AI Analysis:</b>\\n${ai}`;\n\nreturn [{ json: { text: msg.slice(0, 4096) } }];"
+      },
+      "name": "Build Telegram Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Build Prompt", "type": "main", "index": 0 }]] },
+    "Build Prompt": { "main": [[{ "node": "OpenAI Analysis", "type": "main", "index": 0 }]] },
+    "OpenAI Analysis": { "main": [[{ "node": "Build Telegram Message", "type": "main", "index": 0 }]] },
+    "Build Telegram Message": { "main": [[{ "node": "Telegram Alert", "type": "main", "index": 0 }]] }
+  }
+}

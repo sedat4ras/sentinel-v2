@@ -1,0 +1,16 @@
+[Unit]
+Description=Sentinel V2 Honeypot Monitor
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/honeypot
+ExecStart=/opt/honeypot/venv/bin/python3 /opt/honeypot/src/monitor.py
+Restart=always
+RestartSec=5
+EnvironmentFile=/opt/honeypot/.env
+Environment=COWRIE_LOG_FILE=/opt/honeypot/logs/cowrie.json
+
+[Install]
+WantedBy=multi-user.target

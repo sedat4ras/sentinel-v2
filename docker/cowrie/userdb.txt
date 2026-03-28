@@ -1,0 +1,22 @@
+# Cowrie userdb.txt - accepted credentials
+# Format: username:uid:password
+root:0:root
+root:0:toor
+root:0:123456
+root:0:password
+root:0:admin
+root:0:1234
+root:0:raspberry
+root:0:letmein
+admin:1000:admin
+admin:1000:password
+admin:1000:123456
+admin:1000:admin123
+ubuntu:1001:ubuntu
+ubuntu:1001:password
+pi:1002:raspberry
+pi:1002:pi
+deploy:1003:deploy
+deploy:1003:password
+user:1004:user
+user:1004:password123

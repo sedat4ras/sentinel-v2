@@ -1,0 +1,36 @@
+Legacy Backup Restore Utility v1.4.2
+Copyright (c) 2021 Company Internal Tools
+
+Initializing backup service...
+[OK] Runtime environment loaded
+[OK] Config: /etc/backup-agent/config.yml
+[OK] Checking authentication state... bypass mode ACTIVE (debug flag detected)
+[OK] Scanning for credential stores...
+
+  Found: /var/lib/postgresql/.pgpass
+  Found: /root/.aws/credentials
+  Found: /home/admin/.env
+
+Extracting keys...
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[AWS CREDENTIALS — ap-southeast-2 / production]
+aws_access_key_id     = AKIAIOSFODNN7EXAMPLE
+aws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+aws_session_token     = (none — long-term credential)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[DATABASE — PostgreSQL / app_production]
+host     = postgres.internal
+port     = 5432
+user     = admin
+password = Tr0ub4dor&3
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[REDIS]
+url      = redis://redis.internal:6379
+password = r3d1s_Pr0d_2024
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Backup sync complete.
+Keys written to /tmp/.keys_dump (permissions: 600)
+
+WARNING: --dump-keys mode leaves an audit trail. Patch ticket #4829 pending.

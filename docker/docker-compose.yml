@@ -1,0 +1,110 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Sentinel V2 — Production Honeypot Stack
+#
+# SECURITY DESIGN:
+#   • Cowrie runs in a fully isolated container (cap-drop ALL, read-only fs)
+#   • Monitor reads Cowrie logs via shared named volume — never enters container
+#   • Resource limits prevent fork-bomb and resource exhaustion attacks
+#
+# Prerequisites:
+#   • Move real SSH to port 2222 BEFORE deploying (see deploy.sh)
+#   • Fill in .env with your API keys
+#   • Run from the /docker directory: docker compose up -d
+# ─────────────────────────────────────────────────────────────────────────────
+
+networks:
+  honeypot-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+volumes:
+  cowrie-logs:
+    driver: local
+
+services:
+
+  # ── Cowrie SSH Honeypot ────────────────────────────────────────────────────
+  cowrie:
+    image: cowrie/cowrie:latest
+    container_name: api-service-prod
+    restart: unless-stopped
+
+    ports:
+      - "22:2222"     # Honeypot SSH  (real SSH must already be on port 2222)
+      - "23:2223"     # Honeypot Telnet decoy
+
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+
+    security_opt:
+      - no-new-privileges:true
+
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+      - /cowrie/var/lib/cowrie:size=64m
+
+    pids_limit: 64
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpu_shares: 256
+
+    networks:
+      - honeypot-net
+
+    volumes:
+      - ./cowrie/cowrie.cfg:/cowrie/cowrie-git/etc/cowrie.cfg:ro
+      - ./cowrie/userdb.txt:/cowrie/cowrie-git/etc/userdb.txt:ro
+      - ./cowrie/fs_v2.pickle:/cowrie/cowrie-git/src/cowrie/data/fs.pickle:ro
+      # Deception layer — lure files
+      - ../deception/lures/docker-compose-legacy.yml:/cowrie/cowrie-git/honeyfs/root/docker-compose-legacy.yml:ro
+      - ../deception/lures/.env.backup:/cowrie/cowrie-git/honeyfs/root/.env.backup:ro
+      - ../deception/lures/database_migration.log:/cowrie/cowrie-git/honeyfs/var/log/database_migration.log:ro
+      # Honey-commands
+      - ./cowrie/honey_commands.py:/cowrie/cowrie-git/src/cowrie/commands/honey_commands.py:ro
+      - ./cowrie/commands_init.py:/cowrie/cowrie-git/src/cowrie/commands/__init__.py:ro
+      # Shared log volume — monitor reads from here
+      - cowrie-logs:/cowrie/cowrie-git/var/log/cowrie
+
+    environment:
+      - COWRIE_HOSTNAME=prod-api-server-01
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ── Sentinel Monitor ───────────────────────────────────────────────────────
+  monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile.monitor
+    container_name: sentinel-monitor
+    restart: unless-stopped
+    depends_on:
+      - cowrie
+
+    volumes:
+      - ../src:/app/src:ro
+      - ../.env:/app/.env:ro
+      - cowrie-logs:/logs:ro
+
+    working_dir: /app
+    command: python3 -u src/monitor.py
+
+    environment:
+      - COWRIE_LOG_FILE=/logs/cowrie.json
+
+    networks:
+      - honeypot-net
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

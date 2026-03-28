@@ -1,0 +1,18 @@
+Database Diagnostics Tool v2.0.1
+Mode: --bypass-auth --dump-sessions
+Connected to: postgres.internal:5432/app_production
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Session Table Dump (Active Sessions — legacy schema):
+┌──────────────────────────────────────────────┬──────────┬───────────┐
+│ token                                        │ user     │ role      │
+├──────────────────────────────────────────────┼──────────┼───────────┤
+│ eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOjF9.EXAMPLE1  │ admin    │ superuser │
+│ eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOjJ9.EXAMPLE2  │ deploy   │ admin     │
+│ eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOjN9.EXAMPLE3  │ ci-bot   │ readonly  │
+└──────────────────────────────────────────────┴──────────┴───────────┘
+
+Auth bypass: ACTIVE
+Audit logging: DISABLED (debug mode)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Diagnostics complete.

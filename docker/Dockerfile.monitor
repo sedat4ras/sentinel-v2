@@ -1,0 +1,2 @@
+FROM python:3.11-slim
+RUN pip install requests python-dotenv --no-cache-dir
